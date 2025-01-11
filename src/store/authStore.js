@@ -14,6 +14,7 @@ const createAuthStore = () => {
     const { subscribe, set, update } = writable({
         user: null,
         isAdmin: false,
+        isLoading: true,
     });
 
     return {
@@ -25,6 +26,7 @@ const createAuthStore = () => {
                     ...state,
                     user: userData,
                     isAdmin: userData.isAdmin,
+                    isLoading: false,
                 }));
             } catch (error) {
                 throw new Error("Error al iniciar sesión: " + error.message);
@@ -33,7 +35,7 @@ const createAuthStore = () => {
         async logout() {
             try {
                 await logoutService();
-                set({ user: null, isAdmin: false });
+                update((state) => ({ ...state, user: null, isAdmin: false }));
             } catch (error) {
                 throw new Error("Error al cerrar sesión: " + error.message);
             }
@@ -49,29 +51,34 @@ const createAuthStore = () => {
             }
         },
         checkAuthState() {
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    const uid = user.uid;
-                    let isAdmin = false;
+            update((state) => ({ ...state, isLoading: true }));
+            const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                try {
+                    if (user) {
+                        const uid = user.uid;
+                        let isAdmin = false;
 
-                    try {
                         const userDocRef = doc(db, "users", uid);
                         const userDoc = await getDoc(userDocRef);
 
                         if (userDoc.exists()) {
                             isAdmin = userDoc.data().admin || false;
                         }
-                    } catch (error) {
-                        console.error("Error al obtener información del usuario:", error);
-                    }
 
-                    set({ user, isAdmin });
-                } else {
-                    set({ user: null, isAdmin: false });
+                        set({ user, isAdmin, isLoading: false });
+                    } else {
+                        set({ user: null, isAdmin: false, isLoading: false });
+                    }
+                } catch (error) {
+                    console.error("Error en checkAuthState:", error);
+                    set({ user: null, isAdmin: false, isLoading: false });
                 }
             });
+
+            return unsubscribe; // Para limpieza, si es necesario
         },
     };
 };
 
 export const authStore = createAuthStore();
+

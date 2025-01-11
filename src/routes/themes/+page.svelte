@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from "svelte";
+    import {onDestroy, onMount} from "svelte";
     import { authStore } from "../../store/authStore";
     import { themeStore } from "../../store/themeStore";
 
@@ -16,22 +16,36 @@
 
     let user = null;
     let isAdmin = false;
+    let isLoading = true;
 
-    authStore.subscribe((value) => {
-        user = value.user;
-        isAdmin = value.isAdmin;
+    // Guardar la función de desuscripción
+    let unsubscribeAuth;
+    let unsubscribeCheckAuth;
+
+    onMount(() => {
+        // Verifica el estado de autenticación y guarda la función de desuscripción
+        unsubscribeCheckAuth = authStore.checkAuthState();
+
+        // Suscríbete al estado del authStore
+        unsubscribeAuth = authStore.subscribe((value) => {
+            user = value.user;
+            isAdmin = value.isAdmin;
+            isLoading = value.isLoading;
+
+            if (!isLoading && !user) {
+                alert("Debes iniciar sesión para gestionar temas.");
+                window.location.href = "/login";
+            } else if (!isLoading && user) {
+                newTheme.createdBy = user.email;
+                themeStore.fetchThemes(); // Cargar los temas
+            }
+        });
     });
 
-    onMount(async () => {
-        authStore.checkAuthState();
-
-        if (!user) {
-            alert("Debes iniciar sesión para gestionar temas.");
-            window.location.href = "/login";
-        } else {
-            newTheme.createdBy = user.email;
-            await themeStore.fetchThemes();
-        }
+    onDestroy(() => {
+        // Limpia las suscripciones
+        if (unsubscribeAuth) unsubscribeAuth();
+        if (unsubscribeCheckAuth) unsubscribeCheckAuth();
     });
 
     const toggleForm = () => {

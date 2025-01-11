@@ -1,70 +1,53 @@
-// src/store/nodeStore.js
 import { writable } from "svelte/store";
-import { db } from "../firebase/config/firebaseConfig";
-import { deleteDoc, doc, getDoc } from "firebase/firestore";
-import { getAllNodes } from "../firebase/repositories/nodeRepository";
+import {
+  getAllNodes,
+  getNodeById,
+  saveNode,
+  deleteNode as deleteNodeInFirebase,
+} from "../firebase/repositories/nodeRepository";
 
-// Estado inicial
 function createNodeStore() {
   const { subscribe, set, update } = writable([]);
 
-  // fetchUserAndThemeDetails
-  const fetchUserAndThemeDetails = async (createdById, themeId) => {
-    try {
-      const userDoc = await getDoc(doc(db, "users", createdById));
-      const userEmail = userDoc.exists() ? userDoc.data().email : null;
-
-      const themeDoc = await getDoc(doc(db, "Themes", themeId));
-      const themeTitle = themeDoc.exists() ? themeDoc.data().title : null;
-
-      return { userEmail, themeTitle };
-    } catch (error) {
-      console.error("Error al obtener detalles de usuario o tema:", error.message);
-      return { userEmail: null, themeTitle: null };
-    }
-  };
-
-  // formatNodeData
-  const formatNodeData = async (node) => {
-    const { createdBy, themeId } = node;
-    const { userEmail, themeTitle } = await fetchUserAndThemeDetails(createdBy.id, themeId.id);
-
-    return {
-      ...node,
-      createdAt: node.createdAt ? node.createdAt.toDate().toLocaleDateString() : null,
-      createdBy: userEmail,
-      themeId: themeTitle,
-    };
-  };
-
-  // fetchNodes
+  // fetchNodes: Cargar nodos desde Firebase
   const fetchNodes = async () => {
     try {
-      const nodes = await getAllNodes();
-      set(nodes);
+      const nodes = await getAllNodes(); // Usa la función de nodeRepository
+      set(nodes); // Actualiza el estado del store
     } catch (error) {
       console.error("Error al obtener nodos:", error.message);
     }
   };
 
-  // getNodeById
-  const getNodeById = async (nodeId) => {
+  // getNodeById: Obtener un nodo específico
+  const getNodeByIdFromStore = async (nodeId) => {
     try {
-      const nodeDoc = doc(db, "Nodes", nodeId);
-      const nodeSnapshot = await getDoc(nodeDoc);
-      const nodeData = nodeSnapshot.data();
-      return await formatNodeData({ id: nodeSnapshot.id, ...nodeData });
+      return await getNodeById(nodeId); // Usa la función de nodeRepository
     } catch (error) {
       console.error("Error al obtener nodo:", error.message);
+      return null;
     }
   };
 
-  // deleteNode
+  // saveNode: Crear o actualizar un nodo
+  const saveNodeToStore = async (node) => {
+    try {
+      const result = await saveNode(node); // Usa la función de nodeRepository
+      if (result.success) {
+        await fetchNodes(); // Refresca los nodos después de guardar
+      } else {
+        console.error("Error al guardar nodo:", result.error);
+      }
+    } catch (error) {
+      console.error("Error al guardar nodo:", error.message);
+    }
+  };
+
+  // deleteNode: Eliminar un nodo
   const deleteNode = async (nodeId) => {
     try {
-      const nodeDoc = doc(db, "Nodes", nodeId);
-      await deleteDoc(nodeDoc);
-      await fetchNodes(); // Actualizar nodos después de eliminar
+      await deleteNodeInFirebase(nodeId); // Usa la función de nodeRepository
+      await fetchNodes(); // Refresca los nodos después de eliminar
     } catch (error) {
       console.error("Error al eliminar nodo:", error.message);
     }
@@ -73,7 +56,8 @@ function createNodeStore() {
   return {
     subscribe,
     fetchNodes,
-    getNodeById,
+    getNodeById: getNodeByIdFromStore,
+    saveNode: saveNodeToStore,
     deleteNode,
   };
 }

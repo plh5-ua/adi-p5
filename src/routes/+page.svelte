@@ -2,128 +2,69 @@
     import { authStore } from "../store/authStore";
     import { onMount } from "svelte";
 
-    let email = "";
-    let password = "";
-    let errorMessage = "";
+    let user = null;
 
-    // Verificar el estado de autenticación al cargar la página
-    onMount(() => {
-        authStore.checkAuthState();
+    // Suscribirse al estado del usuario
+    authStore.subscribe((value) => {
+        user = value.user;
     });
 
-    // Función para manejar el inicio de sesión
-    const login = async () => {
-        errorMessage = "";
-        try {
-            await authStore.login(email, password);
-            console.log("Inicio de sesión exitoso");
-        } catch (error) {
-            errorMessage = error.message || "Error al iniciar sesión";
-            console.error(errorMessage);
-        }
-    };
-
-    // Función para manejar el cierre de sesión
-    const logout = async () => {
-        try {
-            await authStore.logout();
-            console.log("Cierre de sesión exitoso");
-        } catch (error) {
-            console.error("Error al cerrar sesión:", error.message);
-        }
-    };
+    onMount(() => {
+        // Verifica el estado del usuario al cargar la página
+        authStore.checkAuthState();
+    });
 </script>
 
 <style>
-    body {
-        background-color: #121212; /* Fondo oscuro */
-        color: #e0e0e0; /* Texto claro */
+    .container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+        text-align: center;
     }
 
     h1 {
-        text-align: center;
-        margin-bottom: 1rem;
-        color: #ff6666; /* Resalta el título */
+        color: #ff6666;
+        font-size: 2rem;
     }
 
-    form {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-        max-width: 400px;
-        margin: 2rem auto;
-        padding: 2rem;
-        background-color: #1e1e1e; /* Fondo oscuro del formulario */
-        border: 1px solid #333;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    p {
+        font-size: 1.2rem;
+        margin: 1rem 0;
     }
 
-    input {
-        padding: 0.75rem;
-        border: 1px solid #555;
-        border-radius: 4px;
-        background-color: #2c2c2c; /* Fondo oscuro para el input */
-        color: #e0e0e0; /* Texto claro */
-        font-size: 1rem;
-    }
-
-    input:focus {
-        border-color: #ff6666; /* Resalta el borde al enfocar */
-        outline: none;
-        box-shadow: 0 0 4px #ff6666;
-    }
-
-    button {
-        padding: 0.75rem;
+    .button {
+        padding: 0.8rem 1.5rem;
         font-size: 1rem;
         font-weight: bold;
-        background-color: #ff6666; /* Botón rojo */
+        background-color: #ff6666;
         color: #fff;
         border: none;
-        border-radius: 4px;
+        border-radius: 6px;
         cursor: pointer;
         transition: background-color 0.3s;
+        margin-top: 1rem;
+        text-decoration: none;
     }
 
-    button:hover {
-        background-color: #e05555; /* Cambia el color al pasar el ratón */
-    }
-
-    button:disabled {
-        background-color: #444;
-        cursor: not-allowed;
-    }
-
-    .error {
-        color: #ff6666;
-        font-size: 0.9rem;
-        text-align: center;
+    .button:hover {
+        background-color: #e05555;
     }
 </style>
 
-<!-- Mostrar el estado del usuario -->
-{#if $authStore.user}
-    <h1>Bienvenido, {$authStore.user.email}!</h1>
-    <button on:click={logout}>Cerrar sesión</button>
-{:else}
-    <h1>Iniciar Sesión</h1>
-    <form on:submit|preventDefault={login}>
-        <input
-                type="email"
-                bind:value={email}
-                placeholder="Correo electrónico"
-                required
-        />
-        <input
-                type="password"
-                bind:value={password}
-                placeholder="Contraseña"
-                required
-        />
-        <button type="submit">Iniciar sesión</button>
-        {#if errorMessage}
-            <p class="error">{errorMessage}</p>
-        {/if}
-    </form>
-{/if}
+<div class="container">
+    {#if user}
+        <h1>Bienvenido, {user.email}!</h1>
+        <p>Explora las funcionalidades de tu cuenta. Puedes gestionar nodos, temas y mucho más.</p>
+        <a href="/nodes" class="button">Ir a Nodos</a>
+        <a href="/themes" class="button" style="margin-left: 1rem;">Ir a Temas</a>
+    {:else}
+        <h1>Bienvenido a la Aplicación</h1>
+        <p>Por favor, inicia sesión para comenzar a usar todas las funcionalidades.</p>
+        <a href="/login" class="button">Iniciar Sesión</a>
+    {/if}
+</div>
