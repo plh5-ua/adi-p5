@@ -6,6 +6,8 @@ import {
     deleteTheme,
     updateTheme,
 } from "../firebase/repositories/ThemeRepository";
+import {doc, getDoc} from "firebase/firestore";
+import {db} from "../firebase/config/firebaseConfig.js";
 
 function createThemeStore() {
     const { subscribe, set, update } = writable({
@@ -38,12 +40,25 @@ function createThemeStore() {
         async createTheme(title, description, imageUrl, createdBy) {
             update((state) => ({ ...state, isLoading: true, error: null }));
             try {
-                const themeId = await createTheme(title, description, imageUrl, createdBy);
-                update((state) => ({
-                    ...state,
-                    themes: [...state.themes, { id: themeId, title, description, imageUrl, createdBy }],
-                    isLoading: false,
-                }));
+                // Crear el tema y obtener su ID
+                const { themeId } = await createTheme(title, description, imageUrl, createdBy);
+
+                // Recuperar el tema recién creado desde Firestore
+                const themeDocRef = doc(db, "Themes", themeId);
+                const themeDoc = await getDoc(themeDocRef);
+
+                if (themeDoc.exists()) {
+                    const newTheme = { id: themeId, ...themeDoc.data() };
+
+                    // Actualizar el store con el tema completo
+                    update((state) => ({
+                        ...state,
+                        themes: [...state.themes, newTheme],
+                        isLoading: false,
+                    }));
+                } else {
+                    throw new Error("No se pudo recuperar el tema recién creado.");
+                }
             } catch (error) {
                 console.error("Error creating theme:", error);
                 update((state) => ({
@@ -52,7 +67,8 @@ function createThemeStore() {
                     error: "Error al crear el tema.",
                 }));
             }
-        },
+        }
+        ,
 
         // Delete a theme
         async deleteTheme(themeId) {
@@ -76,6 +92,7 @@ function createThemeStore() {
 
         // Update a theme
         async updateTheme(themeId, updatedData) {
+            //console.log("Updating theme with data: ", updatedData);
             update((state) => ({ ...state, isLoading: true, error: null }));
             try {
                 await updateTheme(themeId, updatedData);

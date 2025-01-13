@@ -28,10 +28,11 @@ export async function createThemeWithAutoId(title, description, imageUrl, create
     const newTheme = {
         title,
         description,
-        imageUrl,
+        imageUrl: imageUrl || null, // Usa null si no se proporciona una URL
         createdBy,
         createdAt: new Date(),
     };
+
 
     const themeDocRef = await addDoc(collection(db, "Themes"), newTheme);
 

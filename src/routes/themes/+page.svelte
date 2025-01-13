@@ -67,6 +67,7 @@
 
 
     const createTheme = async () => {
+        console.log("Creando tema:", newTheme);
         if (!newTheme.title || !newTheme.description) {
             alert("El título y la descripción son obligatorios.");
             return;
@@ -78,6 +79,8 @@
             newTheme.imageUrl,
             newTheme.createdBy
         );
+
+        console.log("Temas después de crear:", $themeStore.themes);
 
         newTheme = {
             title: "",
